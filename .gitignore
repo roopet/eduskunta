@@ -33,7 +33,7 @@ __pypackages__/
 *.db.bak
 # JOS HALUAT SISÄLLYTTÄÄ DEMO-TIETOKANNAN REPOON (Streamlit Cloudia varten):
 # Poista kommentti seuraavalta riviltä ja vaihda oikea nimi:
-# !he_data_demo.db
+!he_data.db
 
 # Paikallinen PDF-kansio (koska luemme nyt URL:sta)
 he_pdfs/
