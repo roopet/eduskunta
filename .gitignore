@@ -1,0 +1,44 @@
+# Python yleiset
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+MANIFEST
+
+# Virtuaaliympäristöt (Poetry, venv)
+.venv/
+venv/
+env/
+ENV/
+.env
+__pypackages__/
+
+# IDE/Editori -kohtaiset
+.vscode/
+.idea/
+.spyderproject
+.spyproject
+
+# Streamlit
+.streamlit/secrets.toml # TÄRKEÄ: Estää API-avaimen vuotamisen!
+
+# Tietokantatiedostot (SQLite)
+# Estä kaikkien .db-tiedostojen ja niiden väliaikaistiedostojen lisääminen
+*.db
+*.db-journal*
+*.db.bak
+# JOS HALUAT SISÄLLYTTÄÄ DEMO-TIETOKANNAN REPOON (Streamlit Cloudia varten):
+# Poista kommentti seuraavalta riviltä ja vaihda oikea nimi:
+# !he_data_demo.db
+
+# Paikallinen PDF-kansio (koska luemme nyt URL:sta)
+he_pdfs/
+
+# Muut
+*.log
+.DS_Store
+Thumbs.db
