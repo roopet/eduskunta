@@ -7,7 +7,7 @@ from config import DB_NAME
 import os
 import pandas as pd
 import re # Tarvitaan pisteiden parsimiseen
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode, JsCode
+#from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode, JsCode
 
 
 # --- Alustukset ja funktiot (initialize_components, get_pdf_full_text, format_gemini_prompt, get_search_params_from_llm) ---
