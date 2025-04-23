@@ -78,7 +78,7 @@ def get_search_params_from_llm(model, original_question):
         keywords = [kw.strip() for kw in keywords_raw.split(',') if kw.strip() and len(kw) > 1]
 
         # Sallitut tunnisteet
-        allowed_filters = ['orpo', 'marin', 'rinne', 'sipilä', 'nykyinen_kausi', 'edellinen_kausi', 'kaikki']
+        allowed_filters = ['orpo', 'marin', 'rinne', 'sipilä', 'nykyinen_kausi', 'edellinen_kausi', 'kaikki', 'nykyhallitus']
         if filter_identifier_raw not in allowed_filters:
             filter_identifier = 'kaikki' # Oletus, jos tunnistus epäonnistuu
         else:

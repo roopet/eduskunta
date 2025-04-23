@@ -50,7 +50,7 @@ if 'score_threshold' not in st.session_state: st.session_state.score_threshold =
 # --- Vaihe 1: Kysymyksen syöttö ---
 # ... (kuten ennen, nappi nollaa myös relevance_scores) ...
 st.subheader("1. Esitä kysymyksesi")
-question_input = st.text_area("Kirjoita kysymyksesi tähän", height=100, key="question_text_area", value=st.session_state.original_question)
+question_input = st.text_area('Kirjoita kysymyksesi tähän. Kysymys voi esimerkiksi olla "Mitkä nykyhallituksen esitykset vaikuttavat metsien hakkuisiin?"', height=100, key="question_text_area", value=st.session_state.original_question)
 if st.button("Lähetä kysymys ja hae hakuehdotukset"):
     if question_input:
         st.session_state.original_question = question_input

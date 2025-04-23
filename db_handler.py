@@ -111,6 +111,10 @@ def search_hes(conn, keywords, filter_identifier='kaikki'):
         date_condition_sql = "substr(paivamaara, 1, 10) >= ?"
         date_params.append(CURRENT_TERM_START_DATE)
         date_filter_applied = True
+    elif filter_identifier == 'nykyhallitus':
+        date_condition_sql = "substr(paivamaara, 1, 10) >= ?"
+        date_params.append(CURRENT_TERM_START_DATE)
+        date_filter_applied = True    
     elif filter_identifier == 'edellinen_kausi':
         date_condition_sql = "substr(paivamaara, 1, 10) >= ? AND substr(paivamaara, 1, 10) <= ?"
         date_params.extend([PREVIOUS_TERM_START_DATE, PREVIOUS_TERM_END_DATE])
