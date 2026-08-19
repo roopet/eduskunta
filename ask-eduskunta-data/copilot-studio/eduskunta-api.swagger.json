@@ -1,0 +1,399 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Eduskunta Public API for Copilot Studio",
+    "description": "Read-only subset of the Parliament of Finland Public API for parliamentary matters, documents, members, searches and plenary votes.",
+    "version": "1.0.0"
+  },
+  "host": "api.eduskunta.fi",
+  "basePath": "/api/v1",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/reference-data/asiatyypit": {
+      "get": {
+        "operationId": "GetMatterTypes",
+        "summary": "Get parliamentary matter types",
+        "description": "Connectivity smoke test and current reference data for parliamentary matter type codes.",
+        "x-ms-summary": "Get parliamentary matter types",
+        "responses": {
+          "200": {
+            "description": "Matter type reference data.",
+            "schema": {
+              "$ref": "#/definitions/JsonObject"
+            }
+          },
+          "default": {
+            "description": "The API or connector returned an error."
+          }
+        }
+      }
+    },
+    "/search": {
+      "post": {
+        "operationId": "SearchParliamentData",
+        "summary": "Search Parliament data",
+        "description": "Search one Eduskunta category with text, structured filters, sorting and pagination. Use CountParliamentData when only a count is needed.",
+        "x-ms-summary": "Search Parliament data",
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "description": "Search request containing category, optional query, expression, pagination and sorting.",
+            "schema": {
+              "$ref": "#/definitions/SearchRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results and searchMetadata with total and page counts.",
+            "schema": {
+              "$ref": "#/definitions/JsonObject"
+            }
+          },
+          "default": {
+            "description": "The API or connector returned an error."
+          }
+        }
+      }
+    },
+    "/search/count": {
+      "post": {
+        "operationId": "CountParliamentData",
+        "summary": "Count Parliament data",
+        "description": "Count matches for one Eduskunta category and structured expression without retrieving every result page.",
+        "x-ms-summary": "Count Parliament data",
+        "parameters": [
+          {
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "description": "Count request containing category and optional query and expression.",
+            "schema": {
+              "$ref": "#/definitions/SearchRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Object containing the count.",
+            "schema": {
+              "$ref": "#/definitions/JsonObject"
+            }
+          },
+          "default": {
+            "description": "The API or connector returned an error."
+          }
+        }
+      }
+    },
+    "/valtiopaivaasiat/{eduskuntatunnus}": {
+      "get": {
+        "operationId": "GetParliamentaryMatter",
+        "summary": "Get a parliamentary matter",
+        "description": "Get structured details, stages, status and document relationships for one exact parliamentary matter identifier.",
+        "x-ms-summary": "Get a parliamentary matter",
+        "parameters": [
+          {
+            "name": "eduskuntatunnus",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Exact identifier in normal form, for example HE 60/2018 vp.",
+            "x-ms-url-encoding": "single"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Structured parliamentary matter details.",
+            "schema": {
+              "$ref": "#/definitions/JsonObject"
+            }
+          },
+          "default": {
+            "description": "The API or connector returned an error."
+          }
+        }
+      }
+    },
+    "/asiakirjat/eduskuntatunnus/{eduskuntatunnus}": {
+      "get": {
+        "operationId": "GetMatterDocuments",
+        "summary": "Get documents for a parliamentary matter",
+        "description": "List document metadata connected to one exact parliamentary matter identifier.",
+        "x-ms-summary": "Get matter documents",
+        "parameters": [
+          {
+            "name": "eduskuntatunnus",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Exact identifier in normal form, for example HE 60/2018 vp.",
+            "x-ms-url-encoding": "single"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documents associated with the matter.",
+            "schema": {
+              "$ref": "#/definitions/JsonObject"
+            }
+          },
+          "default": {
+            "description": "The API or connector returned an error."
+          }
+        }
+      }
+    },
+    "/asiakirjat/edktunnus/{edktunnus}": {
+      "get": {
+        "operationId": "GetDocumentMetadata",
+        "summary": "Get document metadata",
+        "description": "Get metadata and relationships for one exact EDK document identifier.",
+        "x-ms-summary": "Get document metadata",
+        "parameters": [
+          {
+            "name": "edktunnus",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Exact EDK identifier, for example EDK-2019-AK-243347.",
+            "x-ms-url-encoding": "single"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document metadata.",
+            "schema": {
+              "$ref": "#/definitions/JsonObject"
+            }
+          },
+          "default": {
+            "description": "The API or connector returned an error."
+          }
+        }
+      }
+    },
+    "/asiakirjat/edktunnus/{edktunnus}/html": {
+      "get": {
+        "operationId": "GetDocumentHtml",
+        "summary": "Get document HTML",
+        "description": "Get the authoritative HTML text for one exact EDK document identifier. Use this to verify content claims rather than relying on titles.",
+        "x-ms-summary": "Get document HTML",
+        "produces": [
+          "text/html"
+        ],
+        "parameters": [
+          {
+            "name": "edktunnus",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Exact EDK identifier, for example EDK-2019-AK-243347.",
+            "x-ms-url-encoding": "single"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document HTML content.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "default": {
+            "description": "The API or connector returned an error."
+          }
+        }
+      }
+    },
+    "/kansanedustajat/{henkilonro}": {
+      "get": {
+        "operationId": "GetMember",
+        "summary": "Get a Member of Parliament",
+        "description": "Get one person's details and time-bounded parliamentary, group, constituency, committee and government memberships.",
+        "x-ms-summary": "Get a Member of Parliament",
+        "parameters": [
+          {
+            "name": "henkilonro",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Verified henkilonro value obtained from a search result. Never guess this value.",
+            "x-ms-url-encoding": "single"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Member details and membership history.",
+            "schema": {
+              "$ref": "#/definitions/JsonObject"
+            }
+          },
+          "default": {
+            "description": "The API or connector returned an error."
+          }
+        }
+      }
+    },
+    "/taysistunnot/asian-aanestykset/{eduskuntatunnus}": {
+      "get": {
+        "operationId": "GetMatterVotes",
+        "summary": "Get votes for a parliamentary matter",
+        "description": "List plenary votes connected to one exact parliamentary matter identifier.",
+        "x-ms-summary": "Get matter votes",
+        "parameters": [
+          {
+            "name": "eduskuntatunnus",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Exact identifier in normal form, for example KAA 1/2019 vp.",
+            "x-ms-url-encoding": "single"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Votes associated with the matter.",
+            "schema": {
+              "$ref": "#/definitions/JsonObject"
+            }
+          },
+          "default": {
+            "description": "The API or connector returned an error."
+          }
+        }
+      }
+    },
+    "/taysistunnot/aanestykset/{aanestystunnus}": {
+      "get": {
+        "operationId": "GetVote",
+        "summary": "Get one plenary vote",
+        "description": "Get the question, totals, validity and individual Member votes for one exact vote identifier.",
+        "x-ms-summary": "Get one plenary vote",
+        "parameters": [
+          {
+            "name": "aanestystunnus",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Exact vote id returned by GetMatterVotes or GetSessionVotes, for example 2020-141-2.",
+            "x-ms-url-encoding": "single"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vote details and individual votes.",
+            "schema": {
+              "$ref": "#/definitions/JsonObject"
+            }
+          },
+          "default": {
+            "description": "The API or connector returned an error."
+          }
+        }
+      }
+    },
+    "/taysistunnot/istunnon-aanestykset/{istuntotunnus}": {
+      "get": {
+        "operationId": "GetSessionVotes",
+        "summary": "Get votes for a plenary session",
+        "description": "List all votes connected to one exact plenary session identifier.",
+        "x-ms-summary": "Get session votes",
+        "parameters": [
+          {
+            "name": "istuntotunnus",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": "Exact session id used by the vote API, for example 2020-141. Do not use the PTK document identifier here.",
+            "x-ms-url-encoding": "single"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Votes associated with the plenary session.",
+            "schema": {
+              "$ref": "#/definitions/JsonObject"
+            }
+          },
+          "default": {
+            "description": "The API or connector returned an error."
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "SearchRequest": {
+      "type": "object",
+      "description": "Eduskunta search or count request.",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Optional fuzzy full-text query. Prefer structured expression filters for exact constraints."
+        },
+        "langCode": {
+          "type": "string",
+          "description": "Optional language code such as fi or sv."
+        },
+        "category": {
+          "type": "string",
+          "description": "Search category.",
+          "enum": [
+            "kansanedustaja",
+            "valtiopaivaasia",
+            "asiakirja",
+            "tapahtuma",
+            "puheenvuoro",
+            "aanestys",
+            "yhteystieto",
+            "sivu",
+            "tiedosto"
+          ]
+        },
+        "maxResults": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Maximum results requested for one page.",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 100
+        },
+        "startFromIndex": {
+          "type": "integer",
+          "format": "int32",
+          "description": "Zero-based result offset for pagination.",
+          "minimum": 0,
+          "default": 0
+        },
+        "expression": {
+          "type": "object",
+          "description": "Structured expression using and, or, not, property, match, match_phrase, ranges, exists, with or ids.",
+          "additionalProperties": true
+        },
+        "sort": {
+          "type": "array",
+          "description": "Optional sort definitions with property and ascending fields.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "JsonObject": {
+      "type": "object",
+      "description": "JSON response whose detailed shape is defined by the official Eduskunta OpenAPI specification.",
+      "additionalProperties": true
+    }
+  }
+}
