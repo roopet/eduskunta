@@ -1,0 +1,5 @@
+interface:
+  display_name: "Kysy eduskuntatiedosta"
+  short_description: "Luotettavat haut Eduskunnan avoimesta datasta"
+  default_prompt: "Käytä $ask-eduskunta-data-taitoa vastataksesi kysymykseeni Eduskunnan avoimen datan perusteella lähteet ja rajaukset ilmoittaen."
+
