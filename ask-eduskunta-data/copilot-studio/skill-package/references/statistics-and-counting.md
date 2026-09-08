@@ -30,7 +30,9 @@ Käytä `/search/count`-endpointia, jos yksi API-kysely vastaa määritelmää t
 | puheenvuoro | `puheenvuoro` | `id` |
 | äänestys | `aanestys` | `id` |
 | edustajan ääni | äänestyksen detail | äänestys-id + `henkilonro` |
-| käsittelytapahtuma | vp-asian detail | asian tunnus + vaihe/tunnus + päivä + järjestys |
+| käsittelytapahtuma | vp-asian detail | `kasittelytunnus` |
+| asiantuntijakuulemisen toimijarivi | käsittelyn fraasiryhmä | käsittelytunnus + fraasiryhmä + toimijarivi |
+| asiantuntijalausunto tai liite | `asiantuntijalausunnot` | `edktunnus` |
 
 Älä laske asiasana-, asiakirja-, käsittely- tai lausuntorivejä vp-asioiden määräksi.
 
@@ -49,7 +51,7 @@ Kutsu `/search/count` jokaiselle ei-päällekkäiselle vuosi–tyyppi-yhdistelm�
 
 ### Nykyisten edustajien ryhmäjakauma
 
-Hae `kansanedustaja`-kategoriasta `edustajantoimenTila = Nykyinen`, deduplikoi `henkilonro`-tunnuksella ja ryhmittele `viimeisinEduskuntaryhma.nimi.fi`-arvolla. Ilmoita noutopäivä. Tarkista, että kokonaismäärä vastaa nykyisten yksilöllisten edustajien määrää.
+Hae `kansanedustaja`-kategoriasta `edustajantoimenTila = Nykyinen`, sivuta haku loppuun, deduplikoi `henkilonro`-tunnuksella ja ryhmittele `viimeisinEduskuntaryhma.nimi.fi`-arvolla. Ilmoita noutopäivä. Tarkista, että kokonaismäärä vastaa nykyisten yksilöllisten edustajien määrää. Älä käytä tähän 1 000 riviin katkeavaa `/kansanedustajat`-listausta.
 
 ### Nykyisten edustajien ikäjakauma
 
@@ -142,4 +144,3 @@ Lisää kuvaan tai alaviitteeseen:
 - “Lähde: Eduskunta Public API” ja suora URL tai kyselykuvaus.
 
 Viralliset eduskuntatilastot: https://www.eduskunta.fi/FI/naineduskuntatoimii/tilastot/Sivut/default.aspx
-

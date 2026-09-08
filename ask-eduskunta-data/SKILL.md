@@ -1,6 +1,6 @@
 ---
 name: ask-eduskunta-data
-description: Hae, tulkitse, laske ja varmista Suomen eduskuntaa koskevaa tietoa Eduskunta Public API -rajapinnasta. Käytä taitoa, kun kysymys koskee valtiopäiväasioita, niihin liittyviä asiakirjoja tai asiantuntijalausuntoja, kansanedustajia ja heidän ajallisia jäsenyyksiään, täysistuntojen puheenvuoroja tai pöytäkirjoja, äänestyksiä, valiokuntia, asian käsittelyvaiheita, eduskuntatilastoja tai näiden lähteistettyä visualisointia. Käytä myös silloin, kun käyttäjä mainitsee eduskuntatunnuksen, EDK-tunnuksen, istuntotunnuksen tai äänestystunnuksen taikka pyytää määrällistä vertailua eduskuntadatasta.
+description: Hae, tulkitse, laske ja varmista Suomen eduskuntaa koskevaa tietoa Eduskunta Public API -rajapinnasta. Käytä taitoa, kun kysymys koskee valtiopäiväasioita, niihin liittyviä asiakirjoja tai asiantuntijalausuntoja, kansanedustajia ja heidän ajallisia jäsenyyksiään, täysistuntojen puheenvuoroja tai pöytäkirjoja, äänestyksiä, valiokuntia, asian käsittelyvaiheita, asiantuntijakuulemisia, eduskunta.fi-sivujen sisältöjä tai tiedostoja, eduskuntatilastoja tai näiden lähteistettyä visualisointia. Käytä myös silloin, kun käyttäjä mainitsee eduskuntatunnuksen, EDK-tunnuksen, istuntotunnuksen tai äänestystunnuksen taikka pyytää määrällistä vertailua eduskuntadatasta.
 ---
 
 # Kysy eduskuntatiedosta
@@ -15,7 +15,7 @@ Muodosta Eduskunnan avoimesta datasta luotettava, jäljitettävä vastaus. Erott
 
 Kirjaa ennen hakua:
 
-- mitä entiteettiä kysytään: asia, asiakirja, henkilö, puheenvuoro, pöytäkirjan asiakohta, äänestys vai tapahtuma;
+- mitä entiteettiä kysytään: asia, asiakirja, henkilö, puheenvuoro, pöytäkirjan asiakohta, äänestys, tapahtuma, sisältösivu vai sivuston tiedosto;
 - mikä on laskentayksikkö;
 - aikarajaus ja tarkoittaako se kalenterivuotta, valtiopäivävuotta, vaalikautta, hallituskautta, toimikautta vai istuntoa;
 - kieli, asiatyyppi, asiakirjatyyppi, valiokunta, henkilö tai aihe;
@@ -27,6 +27,7 @@ Lue aina [concepts-and-reliability.md](references/concepts-and-reliability.md). 
 
 - vp-asiat, asiakirjat ja käsittely: [matters-and-documents.md](references/matters-and-documents.md)
 - kansanedustajat: [members.md](references/members.md)
+- eduskunta.fi-sisältösivut ja tiedostot: [content-pages-and-files.md](references/content-pages-and-files.md)
 - puheenvuorot, pöytäkirjat, istunnot ja äänestykset: [speeches-votes-and-sessions.md](references/speeches-votes-and-sessions.md)
 - määrät, trendit ja visualisoinnit: [statistics-and-counting.md](references/statistics-and-counting.md)
 - hakurakenne ja operaattorit: [api-search.md](references/api-search.md)
@@ -52,6 +53,7 @@ python scripts/eduskunta_api.py matter "HE 60/2018 vp"
 python scripts/eduskunta_api.py documents "HE 60/2018 vp"
 python scripts/eduskunta_api.py search --payload query.json --all
 python scripts/eduskunta_api.py count --payload query.json
+python scripts/eduskunta_api.py hearings --year 2026
 ```
 
 Jos apuohjelmaa ei voi ajaa, tee samat kutsut HTTP-työkalulla. Säilytä vähintään:
@@ -74,6 +76,8 @@ Noudata vähimmäistasoa:
 - puheenvuoron sisältö ja puhuja: `puheenvuoro`-hakutulos sekä pöytäkirjan asiakohta;
 - äänestyksen tulos ja edustajakohtaiset äänet: äänestyksen detail-endpoint;
 - henkilön historia: henkilön detail-vastaus ja aikavälilliset jäsenyydet;
+- sisältösivun aihe ja löydettävyys: `sisaltosivu`-hakutuloksen otsikko, lyhyt kuvaus, metadata ja URL;
+- sivustolla julkaistun tiedoston sisältö: `tiedosto`-hakutuloksen `fullText`, kun tiedoston identiteetti ja URL täsmäävät;
 - määrät: `/search/count` tai kokonaan sivutettu ja tunnuksella deduplikoitu aineisto.
 
 Älä päättele asiakirjan tai lausunnon kantaa pelkästä otsikosta. Älä tulkitse hakutuloksen puuttumista todisteeksi siitä, ettei tietoa tai tapahtumaa ole olemassa.
@@ -123,6 +127,6 @@ Tee kuvio vasta, kun määritelmä ja data on tarkistettu. Sisällytä otsikkoon
 - Onko kaikki sivut haettu tai käytetty `count`-endpointia?
 - Onko yli 10 000 osuman haku jaettu ei-päällekkäisiin osiin?
 - Onko sisältöväite tarkistettu tekstistä?
+- Jos käytettiin sisältösivua, perustuuko väite vain saatuihin metatietoihin vai varmennettuun tiedostotekstiin?
 - Onko mukana suora julkinen lähdelinkki ja noutopäivä?
 - Onko epävarmuus erotettu faktasta?
-

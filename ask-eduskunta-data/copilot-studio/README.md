@@ -19,6 +19,8 @@ Tämä hakemisto sovittaa `ask-eduskunta-data`-taidon Copilot Studioon. Copilot 
 7. Luo pyydetty yhteys, lisää toiminnot agentille ja varmista, että ne ovat **Enabled**.
 8. Salli agentin päättää dynaamisesti, milloin toimintoa käytetään. Valitse completion-asetukseksi agentin oma kontekstuaalinen vastaus.
 
+Jos päivität aiemman asennuksen, päivitä myös REST API -tool tämän hakemiston Swagger-versiolla. Se lisää oikean `sisaltosivu`-kategorian, `tiedote`-kategorian sekä `fields`- ja `fullTextHighlight`-kentät tiedostohakuja varten.
+
 Copilot Studio luo REST API -toolille taustalla custom connectorin. Ympäristön DLP- ja Advanced Connector Policy -sääntöjen pitää sallia connector ja host `api.eduskunta.fi`.
 
 Microsoftin ohjeet:

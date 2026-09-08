@@ -16,8 +16,9 @@ from eduskunta_api import (
 
 
 class FakeSearchTransport:
-    def __init__(self, total: int) -> None:
+    def __init__(self, total: int, row_factory=None) -> None:
         self.total = total
+        self.row_factory = row_factory or (lambda index: {"id": str(index)})
         self.calls: list[dict[str, object]] = []
 
     def __call__(self, method, url, body, headers, timeout):
@@ -28,7 +29,7 @@ class FakeSearchTransport:
         start = int(payload.get("startFromIndex", 0))
         size = int(payload.get("maxResults", 100))
         end = min(start + size, self.total)
-        results = [{"id": str(index)} for index in range(start, end)]
+        results = [self.row_factory(index) for index in range(start, end)]
         response = {
             "results": results,
             "searchMetadata": {
@@ -81,6 +82,119 @@ class ApiHelperTests(unittest.TestCase):
         with self.assertRaises(SearchLimitError):
             client.search_all({"category": "puheenvuoro"}, method="get")
 
+    def test_mps_uses_paginated_search_and_preserves_list_shape(self):
+        transport = FakeSearchTransport(
+            total=2001,
+            row_factory=lambda index: {
+                "id": str(index),
+                "kansanedustaja": {
+                    "henkilonro": str(index),
+                    "sukunimi": f"Nimi {index}",
+                },
+            },
+        )
+        client = EduskuntaClient(transport=transport, sleeper=lambda _: None)
+
+        result = client.mps()
+
+        self.assertEqual(len(transport.calls), 3)
+        self.assertTrue(
+            all(call["payload"]["category"] == "kansanedustaja" for call in transport.calls)
+        )
+        self.assertEqual(len(result["data"]["kansanedustajat"]), 2001)
+        self.assertEqual(result["data"]["searchMetadata"]["uniquePersonCount"], 2001)
+
+    def test_hearings_keeps_all_phase_codes_sections_and_separate_attachments(self):
+        def event(code, identifier, date="2026-02-13"):
+            return {
+                "tapahtumapvm": date,
+                "kasittelytunnus": identifier,
+                "yleinenkasittelyvaihe": "Asiantuntijakuuleminen",
+                "yleinenkasittelyvaihetunnus": code,
+                "valiokunta": {
+                    "nimi": "Talousvaliokunta",
+                    "tunnus": "TaV",
+                    "jaosto": {"nimi": "Työjaosto", "tunnus": "TYJ"},
+                },
+                "jarjestys": 1,
+                "fraasi": {
+                    "fraasisisalto": None,
+                    "fraasiryhmat": [
+                        {
+                            "fraasiKappaleKooste": "Valiokunnassa olivat kuultavina:",
+                            "fraasiToimijat": [
+                                {
+                                    "fraasiyhteistoteksti": "Esimerkkivirasto",
+                                    "fraasihenkilo": None,
+                                }
+                            ],
+                        }
+                    ],
+                },
+            }
+
+        events = [
+            event("ATKUUL", "TP-1"),
+            event("ATKUULA", "TP-2"),
+            event("ATKUULJT", "TP-3"),
+            event("ATKUJTA", "TP-4"),
+            event("ATKUUL", "TP-1"),
+            event("MUU", "TP-5"),
+            event("ATKUUL", "TP-6", date="2025-12-31"),
+        ]
+        statements = [
+            {
+                "edktunnus": "EDK-2026-AK-1",
+                "asiakirjatyyppikoodi": "AL",
+                "asiakirjatyyppinimi": "Asiantuntijalausunto",
+                "nimeketeksti": "Sama asiantuntija ja otsikko",
+                "laadintapvm": "2026-02-13",
+                "lausuntoJarjestys": 2,
+            },
+            {
+                "edktunnus": "EDK-2026-AK-2",
+                "asiakirjatyyppikoodi": "ALL",
+                "asiakirjatyyppinimi": "Asiantuntijalausunnon liite",
+                "nimeketeksti": "Sama asiantuntija ja otsikko",
+                "laadintapvm": "2026-02-13",
+                "lausuntoJarjestys": 1,
+            },
+            {
+                "edktunnus": "EDK-2025-AK-9",
+                "asiakirjatyyppikoodi": "AL",
+                "laadintapvm": "2025-12-31",
+            },
+        ]
+        matter = {
+            "eduskuntatunnus": {"fi": "U 4/2026 vp"},
+            "nimeke": {"fi": "Esimerkkiasia"},
+            "kasittelyt": {"fi": events},
+            "asiantuntijalausunnot": {"fi": statements},
+        }
+        transport = FakeSearchTransport(
+            total=1,
+            row_factory=lambda _: {"id": "matter-1", "valtiopaivaasia": matter},
+        )
+        client = EduskuntaClient(transport=transport, sleeper=lambda _: None)
+
+        result = client.hearings(2026)
+
+        self.assertEqual(result["data"]["counts"]["hearingEvents"], 4)
+        self.assertEqual(result["data"]["counts"]["actorParticipations"], 4)
+        self.assertEqual(result["data"]["counts"]["statementDocuments"], 2)
+        self.assertEqual(
+            {row["yleinenKasittelyvaihetunnus"] for row in result["data"]["events"]},
+            {"ATKUUL", "ATKUULA", "ATKUULJT", "ATKUJTA"},
+        )
+        self.assertEqual(result["data"]["events"][0]["valiokunta"]["jaosto"]["tunnus"], "TYJ")
+        self.assertEqual(
+            {row["edktunnus"] for row in result["data"]["statementDocuments"]},
+            {"EDK-2026-AK-1", "EDK-2026-AK-2"},
+        )
+        nested = transport.calls[0]["payload"]["expression"]
+        self.assertEqual(nested["property"], "kasittelyt.fi")
+        self.assertEqual(nested["with"]["and"][1]["fromDate"], "2026-01-01")
+
     def test_transient_error_is_retried(self):
         calls = 0
         sleeps: list[float] = []
@@ -121,4 +235,3 @@ class ApiHelperTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

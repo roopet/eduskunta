@@ -27,6 +27,7 @@ DEFAULT_TIMEOUT = 45.0
 TRANSIENT_STATUS = {429, 500, 502, 503, 504}
 MAX_SEARCH_RESULTS = 10_000
 USER_AGENT = "ask-eduskunta-data/1.0 (+https://api.eduskunta.fi/)"
+HEARING_PHASE_CODES = {"ATKUUL", "ATKUULA", "ATKUULJT", "ATKUJTA"}
 
 
 class ApiError(RuntimeError):
@@ -68,6 +69,19 @@ def encode_path_identifier(value: str) -> str:
     if not value or not value.strip():
         raise ValueError("Identifier must not be empty")
     return quote(value.strip(), safe="")
+
+
+def _language_value(value: Any, language: str) -> Any:
+    if isinstance(value, dict):
+        return value.get(language)
+    return value
+
+
+def _date_in_half_open_year(value: Any, year: int) -> bool:
+    if not isinstance(value, str):
+        return False
+    day = value[:10]
+    return f"{year:04d}-01-01" <= day < f"{year + 1:04d}-01-01"
 
 
 def public_matter_url(eduskuntatunnus: str) -> str:
@@ -369,7 +383,236 @@ class EduskuntaClient:
         return self._json("GET", f"/kansanedustajat/{encode_path_identifier(identifier)}")
 
     def mps(self) -> dict[str, Any]:
-        return self._json("GET", "/kansanedustajat")
+        """Fetch the complete MP index without the 1,000-row list truncation."""
+
+        result = self.search_all(
+            {
+                "category": "kansanedustaja",
+                "sort": [{"property": "henkilonro", "ascending": True}],
+            },
+            method="get",
+            page_size=1000,
+        )
+        people: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for row in result["data"]["results"]:
+            if not isinstance(row, dict) or not isinstance(row.get("kansanedustaja"), dict):
+                continue
+            person = row["kansanedustaja"]
+            identifier = str(person.get("henkilonro") or row.get("id") or "")
+            if identifier and identifier in seen:
+                continue
+            if identifier:
+                seen.add(identifier)
+            people.append(person)
+
+        metadata = result["data"]["searchMetadata"]
+        result["data"] = {
+            "kansanedustajat": people,
+            "searchMetadata": {
+                **metadata,
+                "uniquePersonCount": len(people),
+            },
+        }
+        return result
+
+    def hearings(self, year: int, *, language: str = "fi") -> dict[str, Any]:
+        """Fetch expert-hearing events and statement documents for a calendar year."""
+
+        if language not in {"fi", "sv"}:
+            raise ValueError("language must be fi or sv")
+        if year < 1900 or year > 2200:
+            raise ValueError("year must be between 1900 and 2200")
+
+        start_date = f"{year:04d}-01-01"
+        end_date = f"{year + 1:04d}-01-01"
+        payload = {
+            "category": "valtiopaivaasia",
+            "expression": {
+                "property": "kasittelyt.fi",
+                "with": {
+                    "and": [
+                        {
+                            "property": "yleinenkasittelyvaihe",
+                            "match": "Asiantuntijakuuleminen",
+                        },
+                        {
+                            "property": "tapahtumapvm",
+                            "fromDate": start_date,
+                            "toDate": end_date,
+                        },
+                    ]
+                },
+            },
+        }
+        result = self.search_all(payload, method="get", page_size=1000)
+
+        events: list[dict[str, Any]] = []
+        statements: list[dict[str, Any]] = []
+        seen_events: set[str] = set()
+        seen_statements: set[str] = set()
+        matter_ids_with_events: set[str] = set()
+        participation_count = 0
+
+        for row in result["data"]["results"]:
+            matter = row.get("valtiopaivaasia") if isinstance(row, dict) else None
+            if not isinstance(matter, dict):
+                continue
+            matter_id = _language_value(matter.get("eduskuntatunnus"), language)
+            matter_title = _language_value(matter.get("nimeke"), language)
+
+            handlings = _language_value(matter.get("kasittelyt"), language) or []
+            for handling in handlings:
+                if not isinstance(handling, dict):
+                    continue
+                phase_code = handling.get("yleinenkasittelyvaihetunnus")
+                if phase_code not in HEARING_PHASE_CODES:
+                    continue
+                if not _date_in_half_open_year(handling.get("tapahtumapvm"), year):
+                    continue
+                handling_id = handling.get("kasittelytunnus")
+                event_key = str(
+                    handling_id
+                    or (
+                        matter_id,
+                        handling.get("tapahtumapvm"),
+                        phase_code,
+                        handling.get("jarjestys"),
+                    )
+                )
+                if event_key in seen_events:
+                    continue
+                seen_events.add(event_key)
+                if matter_id:
+                    matter_ids_with_events.add(str(matter_id))
+
+                phrase = handling.get("fraasi") or {}
+                phrase_groups: list[dict[str, Any]] = []
+                for group in phrase.get("fraasiryhmat") or []:
+                    if not isinstance(group, dict):
+                        continue
+                    actors: list[dict[str, Any]] = []
+                    for actor in group.get("fraasiToimijat") or []:
+                        if not isinstance(actor, dict):
+                            continue
+                        person = actor.get("fraasihenkilo") or {}
+                        actors.append(
+                            {
+                                "etunimi": person.get("fraasietunimi"),
+                                "sukunimi": person.get("fraasisukunimi"),
+                                "asema": person.get("fraasiasemateksti"),
+                                "yhteiso": actor.get("fraasiyhteistoteksti"),
+                            }
+                        )
+                    participation_count += len(actors)
+                    phrase_groups.append(
+                        {
+                            "kuvaus": group.get("fraasiKappaleKooste"),
+                            "toimijat": actors,
+                        }
+                    )
+
+                committee = handling.get("valiokunta") or {}
+                section = committee.get("jaosto") or {}
+                events.append(
+                    {
+                        "eduskuntatunnus": matter_id,
+                        "asianNimeke": matter_title,
+                        "tapahtumapvm": handling.get("tapahtumapvm"),
+                        "kasittelytunnus": handling_id,
+                        "yleinenKasittelyvaihe": handling.get("yleinenkasittelyvaihe"),
+                        "yleinenKasittelyvaihetunnus": phase_code,
+                        "valiokunta": {
+                            "nimi": committee.get("nimi"),
+                            "tunnus": committee.get("tunnus"),
+                            "jaosto": {
+                                "nimi": section.get("nimi"),
+                                "tunnus": section.get("tunnus"),
+                            },
+                        },
+                        "jarjestys": handling.get("jarjestys"),
+                        "fraasiSisalto": phrase.get("fraasisisalto"),
+                        "fraasiryhmat": phrase_groups,
+                    }
+                )
+
+            statement_rows = _language_value(
+                matter.get("asiantuntijalausunnot"), language
+            ) or []
+            for document in statement_rows:
+                if not isinstance(document, dict):
+                    continue
+                if not _date_in_half_open_year(document.get("laadintapvm"), year):
+                    continue
+                document_id = document.get("edktunnus")
+                document_key = str(
+                    document_id
+                    or (
+                        matter_id,
+                        document.get("asiakirjatyyppikoodi"),
+                        document.get("laadintapvm"),
+                        document.get("lausuntoJarjestys"),
+                    )
+                )
+                if document_key in seen_statements:
+                    continue
+                seen_statements.add(document_key)
+                statements.append(
+                    {
+                        "eduskuntatunnus": matter_id,
+                        "asianNimeke": matter_title,
+                        "edktunnus": document_id,
+                        "asiakirjatyyppikoodi": document.get("asiakirjatyyppikoodi"),
+                        "asiakirjatyyppinimi": document.get("asiakirjatyyppinimi"),
+                        "nimeketeksti": document.get("nimeketeksti"),
+                        "valiokuntanimi": document.get("valiokuntanimi"),
+                        "laadintapvm": document.get("laadintapvm"),
+                        "lausuntoJarjestys": document.get("lausuntoJarjestys"),
+                        "htmlSaatavilla": document.get("htmlSaatavilla"),
+                        "liiteSaatavilla": document.get("liiteSaatavilla"),
+                        "julkinenUrl": (
+                            public_document_url(str(document_id))
+                            if document_id
+                            else None
+                        ),
+                    }
+                )
+
+        events.sort(
+            key=lambda item: (
+                item.get("tapahtumapvm") or "",
+                item["valiokunta"].get("nimi") or "",
+                item.get("kasittelytunnus") or "",
+            )
+        )
+        statements.sort(
+            key=lambda item: (
+                item.get("laadintapvm") or "",
+                item.get("eduskuntatunnus") or "",
+                item.get("lausuntoJarjestys")
+                if isinstance(item.get("lausuntoJarjestys"), int)
+                else -1,
+                item.get("edktunnus") or "",
+            )
+        )
+        search_metadata = result["data"]["searchMetadata"]
+        result["data"] = {
+            "year": year,
+            "language": language,
+            "interval": {"fromDate": start_date, "toDateExclusive": end_date},
+            "hearingPhaseCodes": sorted(HEARING_PHASE_CODES),
+            "counts": {
+                "matchingMatters": search_metadata.get("actualResultCount", 0),
+                "mattersWithHearingEvents": len(matter_ids_with_events),
+                "hearingEvents": len(events),
+                "actorParticipations": participation_count,
+                "statementDocuments": len(statements),
+            },
+            "events": events,
+            "statementDocuments": statements,
+            "searchMetadata": search_metadata,
+        }
+        return result
 
     def vote(self, identifier: str) -> dict[str, Any]:
         return self._json(
@@ -529,6 +772,12 @@ def build_parser() -> argparse.ArgumentParser:
         item.add_argument("identifier")
 
     sub.add_parser("mps", help="Fetch all MPs")
+    hearings = sub.add_parser(
+        "hearings",
+        help="Fetch expert hearings and written statement documents for a calendar year",
+    )
+    hearings.add_argument("--year", required=True, type=int)
+    hearings.add_argument("--language", choices=("fi", "sv"), default="fi")
     sub.add_parser("latest-votes", help="Fetch the latest votes")
 
     reference = sub.add_parser("reference", help="Fetch reference data")
@@ -588,6 +837,8 @@ def run_command(args: argparse.Namespace) -> Any:
         return client.mp(args.identifier)
     if args.command == "mps":
         return client.mps()
+    if args.command == "hearings":
+        return client.hearings(args.year, language=args.language)
     if args.command == "vote":
         return client.vote(args.identifier)
     if args.command == "session-votes":
@@ -617,4 +868,3 @@ def main(argv: Iterable[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
