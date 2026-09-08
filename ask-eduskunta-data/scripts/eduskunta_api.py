@@ -28,6 +28,10 @@ TRANSIENT_STATUS = {429, 500, 502, 503, 504}
 MAX_SEARCH_RESULTS = 10_000
 USER_AGENT = "ask-eduskunta-data/1.0 (+https://api.eduskunta.fi/)"
 HEARING_PHASE_CODES = {"ATKUUL", "ATKUULA", "ATKUULJT", "ATKUJTA"}
+HEARING_PHASE_NAMES = {
+    "fi": "Asiantuntijakuuleminen",
+    "sv": "Utfrågning av sakkunniga",
+}
 
 
 class ApiError(RuntimeError):
@@ -75,6 +79,30 @@ def _language_value(value: Any, language: str) -> Any:
     if isinstance(value, dict):
         return value.get(language)
     return value
+
+
+def _dict_or_empty(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _list_or_empty(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def _language_list_with_fallback(
+    value: Any, language: str, *, fallback_language: str
+) -> tuple[list[Any], str | None]:
+    if not isinstance(value, dict):
+        return [], None
+    selected = value.get(language)
+    if isinstance(selected, list) and selected:
+        return selected, language
+    fallback = value.get(fallback_language)
+    if language != fallback_language and isinstance(fallback, list) and fallback:
+        return fallback, fallback_language
+    if isinstance(selected, list):
+        return selected, language
+    return [], None
 
 
 def _date_in_half_open_year(value: Any, year: int) -> bool:
@@ -429,12 +457,12 @@ class EduskuntaClient:
         payload = {
             "category": "valtiopaivaasia",
             "expression": {
-                "property": "kasittelyt.fi",
+                "property": f"kasittelyt.{language}",
                 "with": {
                     "and": [
                         {
                             "property": "yleinenkasittelyvaihe",
-                            "match": "Asiantuntijakuuleminen",
+                            "match": HEARING_PHASE_NAMES[language],
                         },
                         {
                             "property": "tapahtumapvm",
@@ -461,7 +489,10 @@ class EduskuntaClient:
             matter_id = _language_value(matter.get("eduskuntatunnus"), language)
             matter_title = _language_value(matter.get("nimeke"), language)
 
-            handlings = _language_value(matter.get("kasittelyt"), language) or []
+            matter_has_event = False
+            handlings = _list_or_empty(
+                _language_value(matter.get("kasittelyt"), language)
+            )
             for handling in handlings:
                 if not isinstance(handling, dict):
                     continue
@@ -483,19 +514,20 @@ class EduskuntaClient:
                 if event_key in seen_events:
                     continue
                 seen_events.add(event_key)
+                matter_has_event = True
                 if matter_id:
                     matter_ids_with_events.add(str(matter_id))
 
-                phrase = handling.get("fraasi") or {}
+                phrase = _dict_or_empty(handling.get("fraasi"))
                 phrase_groups: list[dict[str, Any]] = []
-                for group in phrase.get("fraasiryhmat") or []:
+                for group in _list_or_empty(phrase.get("fraasiryhmat")):
                     if not isinstance(group, dict):
                         continue
                     actors: list[dict[str, Any]] = []
-                    for actor in group.get("fraasiToimijat") or []:
+                    for actor in _list_or_empty(group.get("fraasiToimijat")):
                         if not isinstance(actor, dict):
                             continue
-                        person = actor.get("fraasihenkilo") or {}
+                        person = _dict_or_empty(actor.get("fraasihenkilo"))
                         actors.append(
                             {
                                 "etunimi": person.get("fraasietunimi"),
@@ -512,8 +544,8 @@ class EduskuntaClient:
                         }
                     )
 
-                committee = handling.get("valiokunta") or {}
-                section = committee.get("jaosto") or {}
+                committee = _dict_or_empty(handling.get("valiokunta"))
+                section = _dict_or_empty(committee.get("jaosto"))
                 events.append(
                     {
                         "eduskuntatunnus": matter_id,
@@ -536,9 +568,14 @@ class EduskuntaClient:
                     }
                 )
 
-            statement_rows = _language_value(
-                matter.get("asiantuntijalausunnot"), language
-            ) or []
+            if not matter_has_event:
+                continue
+
+            statement_rows, statement_language = _language_list_with_fallback(
+                matter.get("asiantuntijalausunnot"),
+                language,
+                fallback_language="fi",
+            )
             for document in statement_rows:
                 if not isinstance(document, dict):
                     continue
@@ -570,6 +607,7 @@ class EduskuntaClient:
                         "lausuntoJarjestys": document.get("lausuntoJarjestys"),
                         "htmlSaatavilla": document.get("htmlSaatavilla"),
                         "liiteSaatavilla": document.get("liiteSaatavilla"),
+                        "metadataLanguage": statement_language,
                         "julkinenUrl": (
                             public_document_url(str(document_id))
                             if document_id
