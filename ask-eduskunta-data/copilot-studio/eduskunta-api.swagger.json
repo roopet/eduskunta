@@ -2,8 +2,8 @@
   "swagger": "2.0",
   "info": {
     "title": "Eduskunta Public API for Copilot Studio",
-    "description": "Read-only subset of the Parliament of Finland Public API for parliamentary matters, documents, members, searches and plenary votes.",
-    "version": "1.0.0"
+    "description": "Read-only subset of the Parliament of Finland Public API for parliamentary matters, documents, members, hearings, website content, files and plenary votes.",
+    "version": "1.1.0"
   },
   "host": "api.eduskunta.fi",
   "basePath": "/api/v1",
@@ -40,7 +40,7 @@
       "post": {
         "operationId": "SearchParliamentData",
         "summary": "Search Parliament data",
-        "description": "Search one Eduskunta category with text, structured filters, sorting and pagination. Use CountParliamentData when only a count is needed.",
+        "description": "Search one Eduskunta category with text, structured filters, field selection, sorting and pagination. The tiedosto category may return indexed full text. Use CountParliamentData when only a count is needed.",
         "x-ms-summary": "Search Parliament data",
         "parameters": [
           {
@@ -166,7 +166,7 @@
             "in": "path",
             "required": true,
             "type": "string",
-            "description": "Exact EDK identifier, for example EDK-2019-AK-243347.",
+            "description": "Exact EDK identifier returned by the API, for example EDK-2019-AK-243347 or the older form EDK_HE_1_2010. Do not rewrite its format.",
             "x-ms-url-encoding": "single"
           }
         ],
@@ -198,7 +198,7 @@
             "in": "path",
             "required": true,
             "type": "string",
-            "description": "Exact EDK identifier, for example EDK-2019-AK-243347.",
+            "description": "Exact EDK identifier returned by the API, for example EDK-2019-AK-243347 or the older form EDK_HE_1_2010. Do not rewrite its format.",
             "x-ms-url-encoding": "single"
           }
         ],
@@ -356,7 +356,8 @@
             "puheenvuoro",
             "aanestys",
             "yhteystieto",
-            "sivu",
+            "sisaltosivu",
+            "tiedote",
             "tiedosto"
           ]
         },
@@ -374,6 +375,33 @@
           "description": "Zero-based result offset for pagination.",
           "minimum": 0,
           "default": 0
+        },
+        "fields": {
+          "type": "object",
+          "description": "Fields to include or exclude. Use operation exclude with list fullText for a lightweight file discovery search; the excluded property may still be serialized with a null value.",
+          "required": [
+            "operation",
+            "list"
+          ],
+          "properties": {
+            "operation": {
+              "type": "string",
+              "enum": [
+                "include",
+                "exclude"
+              ]
+            },
+            "list": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "fullTextHighlight": {
+          "type": "boolean",
+          "description": "Ask the search service for full-text highlighting when supported. This does not replace reading tiedosto.fullText."
         },
         "expression": {
           "type": "object",

@@ -2,7 +2,9 @@
 
 ## Identiteetti ja lähde
 
-Käytä perustietoon kategoriaa `kansanedustaja`, `GET /kansanedustajat` -listausta tai `GET /kansanedustajat/{id}` -detail-endpointia. Listaus sisältää myös entisiä edustajia, joten se ei sellaisenaan tarkoita nykyisiä kansanedustajia. Poimi `henkilonro` saman henkilön varmennetusta hakutuloksesta ja tarkista, että detail-vastauksen nimi täsmää. Älä koskaan arvaa henkilönumeroa tai liitä henkilöitä pelkän nimen perusteella.
+Käytä perustietoon `kansanedustaja`-hakukategoriaa ja `GET /kansanedustajat/{id}` -detail-endpointia. `GET /kansanedustajat` palauttaa vain ensimmäiset 1 000 henkilöä eikä tarjoa dokumentoitua sivutusta, joten älä käytä sitä kaikkien nykyisten ja entisten edustajien kattavaan inventaarioon. Sivuta sen sijaan `/search`-haku kategoriassa `kansanedustaja` loppuun ja deduplikoi `henkilonro`-arvolla.
+
+Sekä listaus että hakukategoria sisältävät myös entisiä edustajia, joten kumpikaan ei sellaisenaan tarkoita nykyisiä kansanedustajia. Poimi `henkilonro` saman henkilön varmennetusta hakutuloksesta ja tarkista, että detail-vastauksen nimi täsmää. Älä koskaan arvaa henkilönumeroa tai liitä henkilöitä pelkän nimen perusteella.
 
 Perusobjektissa voi olla:
 
@@ -70,3 +72,5 @@ Kun listaat henkilöitä, anna vähintään:
 - `henkilonro` tai linkki henkilön API-detailiin
 
 Älä näytä nykyistä ryhmää historiallisena ryhmänä vain siksi, että se on helpommin saatavilla.
+
+Kun tehtävä edellyttää koko henkilökantaa, vertaa sivutetun haun `actualResultCount`-arvoa `totalResultCount`-arvoon ja ilmoita kattavuus. Älä tulkitse 1 000 rivin tulosta koko kannaksi.

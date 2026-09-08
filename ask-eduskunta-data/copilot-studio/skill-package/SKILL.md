@@ -1,6 +1,6 @@
 ---
 name: ask-eduskunta-data
-description: Hae, tulkitse, laske ja varmista Suomen eduskuntaa koskevaa tietoa agentille lisätyillä Eduskunta Public API -työkaluilla. Käytä taitoa valtiopäiväasioihin, asiakirjoihin, asiantuntijalausuntoihin, kansanedustajiin ja heidän ajallisiin jäsenyyksiinsä, täysistuntojen puheenvuoroihin ja pöytäkirjoihin, äänestyksiin, valiokuntiin, käsittelyvaiheisiin, eduskuntatilastoihin, eduskuntatunnuksiin ja määrällisiin vertailuihin.
+description: Hae, tulkitse, laske ja varmista Suomen eduskuntaa koskevaa tietoa agentille lisätyillä Eduskunta Public API -työkaluilla. Käytä taitoa valtiopäiväasioihin, asiakirjoihin, asiantuntijalausuntoihin ja -kuulemisiin, kansanedustajiin ja heidän ajallisiin jäsenyyksiinsä, täysistuntojen puheenvuoroihin ja pöytäkirjoihin, äänestyksiin, valiokuntiin, käsittelyvaiheisiin, eduskunta.fi-sisältösivuihin ja tiedostoihin, eduskuntatilastoihin, eduskuntatunnuksiin ja määrällisiin vertailuihin.
 ---
 
 # Kysy eduskuntatiedosta Copilot Studiossa
@@ -9,7 +9,7 @@ description: Hae, tulkitse, laske ja varmista Suomen eduskuntaa koskevaa tietoa 
 
 Käytä ulkoisiin tietohakuihin vain agentille lisättyjä Eduskunta Public API -toimintoja. Älä yritä suorittaa Pythonia, komentorivikomentoja tai skill-paketin ulkopuolista koodia. Älä käytä verkkoselausta `api.eduskunta.fi`- tai `www.eduskunta.fi`-osoitteiden lukemiseen.
 
-Käytä `www.eduskunta.fi`-linkkejä vain käyttäjälle näytettävinä lähdelinkkeinä. Varmista sisältö API:n HTML-toiminnolla.
+Käytä `www.eduskunta.fi`-linkkejä vain käyttäjälle näytettävinä lähdelinkkeinä. Varmista parlamentaarisen asiakirjan sisältö API:n HTML-toiminnolla. Sisältösivusta käytä API-haun otsikkoa, lyhyttä kuvausta ja URL:ia; tiedoston sisältöä voit varmentaa `tiedosto`-hakutuloksen `fullText`-kentästä.
 
 Odotetut työkalutoiminnot ovat:
 
@@ -31,7 +31,7 @@ Jos tarvittava toiminto ei ole käytettävissä, kerro, että Eduskunta Public A
 
 Kirjaa ennen hakua:
 
-- entiteetti: asia, asiakirja, henkilö, puheenvuoro, pöytäkirjan asiakohta, äänestys vai tapahtuma;
+- entiteetti: asia, asiakirja, henkilö, puheenvuoro, pöytäkirjan asiakohta, äänestys, tapahtuma, sisältösivu vai sivuston tiedosto;
 - laskentayksikkö;
 - aikarajaus: kalenterivuosi, valtiopäivävuosi, vaalikausi, hallituskausi, toimikausi vai istunto;
 - kieli, asia- tai asiakirjatyyppi, valiokunta, henkilö ja aihe;
@@ -43,6 +43,7 @@ Lue aina [concepts-and-reliability.md](references/concepts-and-reliability.md). 
 
 - asiat ja asiakirjat: [matters-and-documents.md](references/matters-and-documents.md)
 - kansanedustajat: [members.md](references/members.md)
+- eduskunta.fi-sisältösivut ja tiedostot: [content-pages-and-files.md](references/content-pages-and-files.md)
 - puheenvuorot ja äänestykset: [speeches-votes-and-sessions.md](references/speeches-votes-and-sessions.md)
 - määrät ja visualisoinnit: [statistics-and-counting.md](references/statistics-and-counting.md)
 - hakurakenne: [api-search.md](references/api-search.md)
@@ -86,6 +87,8 @@ Anna tunnukset työkaluille normaalissa muodossa, kuten `HE 60/2018 vp`. Connect
 - `GetMatterVotes` inventoi asian äänestykset.
 - `GetVote` osoittaa kysymyksenasettelun, tuloksen ja edustajakohtaiset äänet.
 - `GetSessionVotes` inventoi yhden täysistunnon äänestykset.
+- `sisaltosivu`-hakutulos osoittaa sivun otsikon, lyhyen kuvauksen, julkaisutiedot ja URL:n, ei välttämättä sivun koko leipätekstiä.
+- `tiedosto`-hakutuloksen `fullText` osoittaa valitun sivustotiedoston indeksoidun tekstin, kun tiedoston nimi, tunnus ja URL täsmäävät.
 
 Älä päättele asiakirjan kantaa pelkästä otsikosta. Älä tulkitse puuttuvaa hakutulosta todisteeksi siitä, ettei tietoa ole.
 
@@ -120,5 +123,6 @@ Kerro suurissa tulosjoukoissa kokonaismäärä ja montako osumaa näytät. Käyt
 - Onko henkilönumero poimittu varmennetusta osumasta?
 - Onko kaikki sivut haettu tai käytetty count-toimintoa?
 - Onko sisältöväite tarkistettu HTML-sisällöstä?
+- Onko sisältösivun metatieto erotettu varmennetusta asiakirja- tai tiedostotekstistä?
 - Onko äänestyksen jaa/ei tulkittu kysymyksenasettelusta?
 - Onko mukana lähdelinkki, noutopäivä ja epävarmuus?

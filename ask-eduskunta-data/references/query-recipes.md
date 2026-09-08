@@ -5,7 +5,9 @@
 - [Apuohjelman käyttö](#apuohjelman-käyttö)
 - [Vp-asian haku](#vp-asian-haku)
 - [Asiakirjahaku](#asiakirjahaku)
+- [Asiantuntijakuulemiset](#asiantuntijakuulemiset)
 - [Kansanedustajat](#kansanedustajat)
+- [Sisältösivut ja tiedostot](#sisältösivut-ja-tiedostot)
 - [Puheenvuorot](#puheenvuorot)
 - [Äänestykset](#äänestykset)
 - [Määrät](#määrät)
@@ -26,6 +28,7 @@ python scripts/eduskunta_api.py matter "HE 60/2018 vp" --output he-60.json
 python scripts/eduskunta_api.py documents "HE 60/2018 vp"
 python scripts/eduskunta_api.py public-url matter "HE 60/2018 vp"
 python scripts/eduskunta_api.py public-url document "EDK-2025-AK-8709"
+python scripts/eduskunta_api.py hearings --year 2026
 ```
 
 ## Vp-asian haku
@@ -88,7 +91,48 @@ python scripts/eduskunta_api.py document-text "EDK-2023-AK-9899"
 
 Jos etsit asiantuntijan lausuntoa tietystä asiasta, hae ensin vp-asia ja inventoi `asiantuntijalausunnot.fi`. Hae avoimesta `nimeketeksti`-kentästä henkilön koko nimeä, sukunimeä, organisaatiota ja aihetermien taivutusmuotoja. Vahvista väite dokumentin tekstistä.
 
+Sama asiantuntija voi jättää esimerkiksi varsinaisen lausunnon (`AL`) ja diaesityksen tai muun liitteen (`ALL`) samalla otsikolla ja päivämäärällä. Säilytä kaikki eri `edktunnus`-arvot ja lue kysymyksen kannalta olennaiset liitteet.
+
+Vanhan asiakirjan tunnus voi olla esimerkiksi `EDK_HE_1_2010`. Anna tällainen tunnus apuohjelmalle täsmälleen API:n palauttamassa muodossa.
+
+## Asiantuntijakuulemiset
+
+Koko kalenterivuoden kuulemiset ja kirjalliset lausuntoasiakirjat:
+
+```powershell
+python scripts/eduskunta_api.py hearings --year 2026
+```
+
+Vastaava löytöhaku rajaa päivämäärän saman sisäkkäisen käsittelytapahtuman sisällä:
+
+```json
+{
+  "category": "valtiopaivaasia",
+  "maxResults": 1000,
+  "startFromIndex": 0,
+  "expression": {
+    "property": "kasittelyt.fi",
+    "with": {
+      "and": [
+        {"property": "yleinenkasittelyvaihe", "match": "Asiantuntijakuuleminen"},
+        {"property": "tapahtumapvm", "fromDate": "2026-01-01", "toDate": "2027-01-01"}
+      ]
+    }
+  }
+}
+```
+
+Sivuta kaikki vp-asiat. Suodata niiden `kasittelyt.fi`-listasta päivämääräväli ja koodit `ATKUUL`, `ATKUULA`, `ATKUULJT` ja `ATKUJTA`; deduplikoi `kasittelytunnus`-arvolla. Poimi myös `valiokunta.jaosto` ja kaikki fraasiryhmät. Pidä kuulemistapahtumien, toimijarivien ja `asiantuntijalausunnot.fi`-asiakirjojen määrät erillään.
+
 ## Kansanedustajat
+
+Kaikki API:sta löytyvät nykyiset ja entiset kansanedustajat haetaan sivutetusta hakukategoriasta:
+
+```powershell
+python scripts/eduskunta_api.py mps
+```
+
+Älä käytä kattavaan hakuun suoraan `/kansanedustajat`-listausta, koska se katkeaa 1 000 henkilöön.
 
 Nykyiset kansanedustajat:
 
@@ -129,6 +173,35 @@ python scripts/eduskunta_api.py mp HENKILONRO
 ```
 
 Historiallinen ryhmä + toimielin -kysymys edellyttää molempien listojen aikavälien tarkistamista detail-vastauksesta. Älä yritä ratkaista sitä vain sumealla `query`-haulla.
+
+## Sisältösivut ja tiedostot
+
+Eduskunta.fi-sivun löytäminen metatietojen ja lyhyen kuvauksen perusteella:
+
+```json
+{
+  "category": "sisaltosivu",
+  "query": "Euroopan unionin rahoituskehys vuosille 2028 2034",
+  "maxResults": 20,
+  "startFromIndex": 0
+}
+```
+
+Voit linkittää osuman käyttäjälle, jos otsikko ja lyhyt kuvaus osoittavat sen liittyvän kysymykseen. Älä väitä lukeneesi sivun koko sisältöä, jos API palautti vain metatiedot.
+
+Sivustolla julkaistun tiedoston kevyt löytöhaku:
+
+```json
+{
+  "category": "tiedosto",
+  "query": "eduskunta ja EU",
+  "maxResults": 20,
+  "startFromIndex": 0,
+  "fields": {"operation": "exclude", "list": ["fullText"]}
+}
+```
+
+Kun oikea tiedosto on tunnistettu, toista tarkka haku ilman `fields`-poissulkua ja varmista väite palautetusta `tiedosto.fullText`-kentästä. Säilytä tiedoston nimi, `id`, URL ja noutopäivä.
 
 ## Puheenvuorot
 

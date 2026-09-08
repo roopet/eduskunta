@@ -6,6 +6,7 @@
 - [Vp-asian detail-vastaus](#vp-asian-detail-vastaus)
 - [Asiakirjainventaario](#asiakirjainventaario)
 - [Käsittelyn tulkinta](#käsittelyn-tulkinta)
+- [Asiantuntijakuulemiset](#asiantuntijakuulemiset)
 - [Kieli ja valiokunta](#kieli-ja-valiokunta)
 - [Sisällön lukeminen](#sisällön-lukeminen)
 - [Linkit](#linkit)
@@ -56,6 +57,8 @@ Kerää yhdestä asiakirjasta vähintään:
 
 Litistä `kasittelynAsiakirjat` varovasti. Yhdistä rakenteet, mutta deduplikoi ensisijaisesti `edktunnus`-arvolla. Jos `edktunnus` puuttuu, käytä varatunnuksena yhdistelmää `eduskuntatunnus + asiakirjatyyppikoodi + kieli + laadintapvm`, ja kerro heikompi varmuus.
 
+Käytä `edktunnus`-arvoa täsmälleen API:n palauttamassa muodossa. Ennen vuotta 2015 tunnukset voivat poiketa nykyisestä väliviivamuodosta, esimerkiksi `EDK_HE_1_2010`. Älä rakenna tai hylkää tunnusta pelkän muodon perusteella; anna koko arvo toolille sellaisenaan.
+
 Asiantuntija-aineiston yleisiä koodeja:
 
 - `AL`: asiantuntijalausunto
@@ -64,6 +67,8 @@ Asiantuntija-aineiston yleisiä koodeja:
 - `LS`: lisäselvitys
 
 Nouda ajantasainen nimi ja aktiivisuustieto `/reference-data/asiakirjatyypit`-endpointista.
+
+Yhdellä asiantuntijalla voi olla samassa kuulemisessa useita erillisiä asiakirjoja, esimerkiksi kirjallinen lausunto (`AL`) ja diaesitys tai muu liite (`ALL`). Niillä voi olla sama `nimeketeksti`, henkilö, organisaatio ja päivämäärä. Älä deduplikoi nimen tai otsikon perusteella: säilytä jokainen eri `edktunnus`, ja käsittele myös `V`- ja `LS`-aineistot erillisinä. Voit ryhmitellä asiakirjat asiantuntijan alle esitystä varten, mutta inventoi ja tarvittaessa lue jokainen pääasiakirja ja liite. Kerro, jos jokin liite jäi lukematta.
 
 ## Käsittelyn tulkinta
 
@@ -78,6 +83,20 @@ Järjestä `kasittelyt.fi` tapahtumapäivän ja tarvittaessa `jarjestys`-kentän
 Lakiehdotus käsitellään valiokunnan mietinnön pohjalta kahdessa täysistuntokäsittelyssä. Ensimmäisessä päätetään sisällöstä; toisessa hyväksymisestä tai hylkäämisestä ja mahdollisista lausumista. Älä merkitse ensimmäisessä käsittelyssä hyväksyttyä sisältöä lopullisesti hyväksytyksi laiksi.
 
 Valiokunnan mietintö valmistelee asian täysistunnolle. Valiokunnan lausunto annetaan yleensä toiselle valiokunnalle. Asiantuntijalausunto on kuultavan henkilön tai organisaation toimittama aineisto.
+
+Poimi käsittelystä sekä `valiokunta.nimi` ja `valiokunta.tunnus` että `valiokunta.jaosto.nimi` ja `valiokunta.jaosto.tunnus`. Tyhjä jaosto tarkoittaa vain, ettei jaostoa ole kirjattu kyseiseen tapahtumaan. Älä päättele jaostoa pelkästä käsittelyvaihekoodista.
+
+## Asiantuntijakuulemiset
+
+Asiantuntijakuulemisen nykyisiä yleisiä käsittelyvaihekoodeja ovat `ATKUUL`, `ATKUULA`, `ATKUULJT` ja `ATKUJTA`. Älä käytä rajauksena pelkkää `ATKUUL*`-alkua, koska se ohittaa `ATKUJTA`-tapahtumat.
+
+Hae vp-asiat `SearchParliamentData`-toiminnolla semanttisesti sisäkkäisestä `kasittelyt.fi`-rakenteesta ehdolla `yleinenkasittelyvaihe = Asiantuntijakuuleminen`, ja rajaa `tapahtumapvm` samassa `with`-objektissa. “Tänä vuonna” tarkoittaa kuulemisen kalenterivuotta, ei asian `valtiopaivavuosi`-arvoa. Sivuta kaikki osumat, suodata haun jälkeen yllä olevat neljä koodia ja päivämääräväli uudelleen sekä deduplikoi `kasittelytunnus`-arvolla.
+
+Lue kaikki `fraasi.fraasiryhmat`. `fraasiKappaleKooste` erottaa esimerkiksi valiokunnassa kuullut toimijat, saapuneet kirjalliset lausunnot ja ilmoitukset siitä, ettei lausuttavaa ole. `fraasiToimijat` voi sisältää henkilön titteleineen ja yhteisöineen tai vain yhteisön. Säilytä valiokunta ja mahdollinen jaosto.
+
+Pidä erillään kuulemistapahtumien, fraasiryhmien toimijarivien, yksilöllisten henkilöiden tai organisaatioiden ja lausuntoasiakirjojen määrät. `asiantuntijalausunnot.fi` on asiakirjainventaario eikä sama asia kuin fraaseista koottu kuultujen luettelo; niiden välillä ei aina ole yksi-yhteen-linkkiä.
+
+Yleisemminkin käsittelyvaiheen koodiperheissä voi olla alias- ja jaostovariantteja. Ryhmittele ensisijaisesti `yleinenkasittelyvaihe`-merkityksen mukaan, säilytä raaka koodi ja varmista jaosto varsinaisesta `valiokunta.jaosto`-objektista.
 
 ## Kieli ja valiokunta
 

@@ -4,6 +4,7 @@
 
 - [Perusosoite ja kategoriat](#perusosoite-ja-kategoriat)
 - [Hakupyyntö](#hakupyyntö)
+- [Kenttävalinta](#kenttävalinta)
 - [Lausekeoperaattorit](#lausekeoperaattorit)
 - [Sivutus ja rajat](#sivutus-ja-rajat)
 - [GET ja POST](#get-ja-post)
@@ -14,7 +15,7 @@
 
 Perusosoite on `https://api.eduskunta.fi/api/v1`.
 
-`/search` tukee OpenAPI-kuvauksen mukaan kategorioita:
+Rajapinnassa käytännössä hyväksyttyjä `/search`-kategorioita ovat:
 
 - `kansanedustaja`
 - `valtiopaivaasia`
@@ -23,10 +24,13 @@ Perusosoite on `https://api.eduskunta.fi/api/v1`.
 - `puheenvuoro`
 - `aanestys`
 - `yhteystieto`
-- `sivu`
+- `sisaltosivu`
+- `tiedote`
 - `tiedosto`
 
-Jätä `category` pois vain aidosti poikkikategoriaisessa löytöhaussa. Tee varmennus aina oikeassa kategoriassa.
+Vanhoissa tai puutteellisissa kuvauksissa voi näkyä `sivu`, mutta API ei välttämättä hyväksy sitä hakukategoriaksi. Tarkista epävarma kategoria kevyellä `CountParliamentData`-pyynnöllä. OpenAPI:n `SearchResultType` kertoo mahdollisista tulostyypeistä, mutta tulostyypin nimi ei välttämättä ole kelvollinen `category`-arvo.
+
+Jätä `category` pois vain aidosti poikkikategoriaisessa tekstilöytöhaussa. Rakenteinen `expression` edellyttää käytännössä kategoriaa, joten tunnettujen kategorioiden poissulkemisella ei voi luotettavasti kartoittaa tuntemattomia kategorioita. Tee varmennus aina oikeassa kategoriassa. Kategoriattomassa haussa sama sisältö voi esiintyä useana tulostyyppinä; deduplikoi `id`- tai sisältötunnuksella.
 
 ## Hakupyyntö
 
@@ -52,6 +56,19 @@ Jätä `category` pois vain aidosti poikkikategoriaisessa löytöhaussa. Tee var
 `query` on sumea tekstihaku. `expression` on rakenteinen rajaus. Kun molemmat annetaan, tekstiosumat rajataan lausekkeella. Eksplisiittinen `sort` ohittaa tekstirelevanssin ensisijaisena järjestyksenä.
 
 `langCode` on OpenAPI-kuvauksen mukaan tuettu ainakin kategorioissa `kansanedustaja`, `valtiopaivaasia` ja `aanestys`. Asiakirjoissa käytä tarvittaessa `kielikoodi`-kenttää.
+
+## Kenttävalinta
+
+`fields` on objekti, ei pelkkä lista. Sillä voi keventää vastausta tai pyytää vain tarpeelliset kentät:
+
+```json
+{
+  "operation": "exclude",
+  "list": ["fullText"]
+}
+```
+
+Sijoita objekti hakupyynnön `fields`-kenttään. `operation` on `include` tai `exclude`. Etenkin `tiedosto.fullText` voi olla pitkä: jätä sen sisältö noutamatta ensimmäisessä löytöhaussa ja nouda se vasta valitulle pienelle tulosjoukolle. Poissuljettu kenttä voi näkyä vastauksessa `null`-arvona. `fullTextHighlight` voi pyytää hakutekstin korostuksia, mutta se ei korvaa varsinaisen kokotekstin lukemista eikä aina tuota osumaa.
 
 ## Lausekeoperaattorit
 
@@ -177,4 +194,3 @@ Viitetiedoissa voi olla aktiivisia ja historiallisia tunnuksia. Valitse ajanjaks
 - Raportoi käyttäjälle, jos kokonaisuutta ei saatu sivutettua loppuun.
 
 Virallinen skeema: https://api.eduskunta.fi/openapi.json
-

@@ -6,6 +6,7 @@
 - [Vp-asian detail-vastaus](#vp-asian-detail-vastaus)
 - [Asiakirjainventaario](#asiakirjainventaario)
 - [Käsittelyn tulkinta](#käsittelyn-tulkinta)
+- [Asiantuntijakuulemiset](#asiantuntijakuulemiset)
 - [Kieli ja valiokunta](#kieli-ja-valiokunta)
 - [Sisällön lukeminen](#sisällön-lukeminen)
 - [Linkit](#linkit)
@@ -56,6 +57,8 @@ Kerää yhdestä asiakirjasta vähintään:
 
 Litistä `kasittelynAsiakirjat` varovasti. Yhdistä rakenteet, mutta deduplikoi ensisijaisesti `edktunnus`-arvolla. Jos `edktunnus` puuttuu, käytä varatunnuksena yhdistelmää `eduskuntatunnus + asiakirjatyyppikoodi + kieli + laadintapvm`, ja kerro heikompi varmuus.
 
+Käytä `edktunnus`-arvoa täsmälleen API:n palauttamassa muodossa. Ennen vuotta 2015 tunnukset voivat poiketa nykyisestä väliviivamuodosta, esimerkiksi `EDK_HE_1_2010`. Älä rakenna tai hylkää tunnusta pelkän muodon perusteella; URL-koodaa koko arvo endpointia varten.
+
 Asiantuntija-aineiston yleisiä koodeja:
 
 - `AL`: asiantuntijalausunto
@@ -64,6 +67,8 @@ Asiantuntija-aineiston yleisiä koodeja:
 - `LS`: lisäselvitys
 
 Nouda ajantasainen nimi ja aktiivisuustieto `/reference-data/asiakirjatyypit`-endpointista.
+
+Yhdellä asiantuntijalla voi olla samassa kuulemisessa useita erillisiä asiakirjoja, esimerkiksi kirjallinen lausunto (`AL`) ja diaesitys tai muu liite (`ALL`). Niillä voi olla sama `nimeketeksti`, henkilö, organisaatio ja päivämäärä. Älä deduplikoi nimen tai otsikon perusteella: säilytä jokainen eri `edktunnus`, ja käsittele myös `V`- ja `LS`-aineistot erillisinä. Voit ryhmitellä asiakirjat asiantuntijan alle esitystä varten, mutta inventoi ja tarvittaessa lue jokainen pääasiakirja ja liite. Kerro, jos jokin liite jäi lukematta.
 
 ## Käsittelyn tulkinta
 
@@ -78,6 +83,38 @@ Järjestä `kasittelyt.fi` tapahtumapäivän ja tarvittaessa `jarjestys`-kentän
 Lakiehdotus käsitellään valiokunnan mietinnön pohjalta kahdessa täysistuntokäsittelyssä. Ensimmäisessä päätetään sisällöstä; toisessa hyväksymisestä tai hylkäämisestä ja mahdollisista lausumista. Älä merkitse ensimmäisessä käsittelyssä hyväksyttyä sisältöä lopullisesti hyväksytyksi laiksi.
 
 Valiokunnan mietintö valmistelee asian täysistunnolle. Valiokunnan lausunto annetaan yleensä toiselle valiokunnalle. Asiantuntijalausunto on kuultavan henkilön tai organisaation toimittama aineisto.
+
+Poimi käsittelystä sekä `valiokunta.nimi` ja `valiokunta.tunnus` että `valiokunta.jaosto.nimi` ja `valiokunta.jaosto.tunnus`. Tyhjä jaosto tarkoittaa vain, ettei jaostoa ole kirjattu kyseiseen tapahtumaan. Älä päättele jaostoa pelkästä käsittelyvaihekoodista.
+
+## Asiantuntijakuulemiset
+
+Asiantuntijakuulemisen nykyisiä yleisiä käsittelyvaihekoodeja ovat:
+
+- `ATKUUL`: asiantuntijakuuleminen;
+- `ATKUULA`: asiantuntijakuuleminen, aliasia;
+- `ATKUULJT`: asiantuntijakuuleminen jaostossa;
+- `ATKUJTA`: asiantuntijakuuleminen jaostossa, aliasia.
+
+Älä käytä rajauksena pelkkää `ATKUUL*`-alkua, koska se ohittaa `ATKUJTA`-tapahtumat. Hae vp-asiat semanttisesti sisäkkäisestä `kasittelyt.fi`-rakenteesta ehdolla `yleinenkasittelyvaihe = Asiantuntijakuuleminen`, ja rajaa `tapahtumapvm` samassa `with`-objektissa. Näin molemmat ehdot kohdistuvat samaan käsittelytapahtumaan. “Tänä vuonna” tarkoittaa kuulemisen kalenterivuotta, ei asian `valtiopaivavuosi`-arvoa; myös vanhemman vp-vuoden asia voi olla kuultavana tänä vuonna.
+
+Suodata haun jälkeen paikallisesti yllä olevat neljä koodia ja päivämääräväli uudelleen. Deduplikoi tapahtuma `kasittelytunnus`-arvolla. Säilytä raaka `yleinenkasittelyvaihetunnus`, valiokunta ja mahdollinen jaosto.
+
+Lue `fraasi.fraasiryhmat` kokonaan. `fraasiKappaleKooste` erottaa esimerkiksi valiokunnassa kuullut toimijat, saapuneet kirjalliset lausunnot ja ilmoitukset siitä, ettei lausuttavaa ole. `fraasiToimijat` voi sisältää henkilön titteleineen ja yhteisöineen tai vain yhteisön. Älä pudota organisaatiota siksi, että henkilöobjekti puuttuu.
+
+Pidä erillään vähintään nämä laskentayksiköt:
+
+- kuulemistapahtuma (`kasittelytunnus`);
+- toimijarivi tai osallistuminen fraasiryhmässä;
+- yksilöllinen henkilö tai organisaatio;
+- lausuntoasiakirja (`edktunnus`).
+
+`asiantuntijalausunnot.fi` on asiakirjainventaario eikä sama asia kuin käsittelytapahtuman fraaseista koottu kuultujen luettelo. Niiden välillä ei aina ole yksiselitteistä yksi-yhteen-linkkiä. Käytä apuohjelmaa koko kalenterivuoden aineistoon:
+
+```powershell
+python scripts/eduskunta_api.py hearings --year 2026
+```
+
+Komento palauttaa kuulemistapahtumat fraasiryhmineen sekä saman vuoden lausuntoasiakirjat erillisinä listoina. Yleisemminkin käsittelyvaiheen koodiperheissä voi olla alias- ja jaostovariantteja. Ryhmittele ensisijaisesti `yleinenkasittelyvaihe`-merkityksen mukaan, säilytä raaka koodi ja varmista jaosto varsinaisesta `valiokunta.jaosto`-objektista.
 
 ## Kieli ja valiokunta
 
@@ -105,4 +142,3 @@ Muodosta URL-koodatut linkit:
 - asiakirja: `https://www.eduskunta.fi/asiat-ja-aanestykset/valtiopaivaasiat/asiakirjat/edktunnus/{edktunnus}/pdf`
 
 Koodaa myös kauttaviiva (`/` -> `%2F`) ja välilyönnit. Käytä `scripts/eduskunta_api.py public-url` -komentoa virheiden välttämiseksi.
-
